@@ -149,7 +149,7 @@ def normalize_channel_name(name):
     name = re.sub(r'\[.*?\]', '', name)
     name = re.sub(r'\(.*?\)', '', name)
     name = re.sub(r'\b(hd|fhd|uhd|4k|sd|channel|tv|ch)\b', '', name, flags=re.IGNORECASE)
-    # Cập nhật: Thêm dấu + vào trong [] để regex không xóa đi dấu + (Ví dụ: Paramount+)
+    # Giữ lại chữ, số, khoảng trắng và dấu +
     name = re.sub(r'[^\w\s+]', '', name)
     name = re.sub(r'\s+', ' ', name).strip().lower()
     return name
@@ -373,7 +373,6 @@ def main():
     print(f"Đang xử lý link đặc biệt: {SPECIAL_URL}")
     try:
         response = requests.get(SPECIAL_URL, timeout=10)
-        # Truyền tham số url nguồn vào để đánh dấu
         channels = parse_m3u(response.text, source_url=SPECIAL_URL)
         for ch in channels:
             if 'name' not in ch:
@@ -428,7 +427,7 @@ def main():
             unique_channels.append(ch)
     print(f"Số kênh sau loại trùng: {len(unique_channels)}")
     
-    # Kiểm tra health (nếu bật) - ở đây CHECK_HEALTH=False nên sẽ nhanh
+    # Kiểm tra health (nếu bật)
     print("Đang kiểm tra kênh lỗi (bỏ qua vì tắt chế độ health)...")
     valid_channels = []
     with ThreadPoolExecutor(max_workers=50) as executor:
@@ -457,10 +456,9 @@ def main():
         if group in ("Kênh VTV", "Giải Trí"):
             grouped[group].sort(key=lambda x: sort_key(x, group))
         else:
-            # Sử dụng thuật toán Natural Sort để các kênh đánh số (VD: SPOTV, SPOTV 2, SPOTV 10) 
-            # nằm đúng thứ tự kế tiếp nhau.
+            # FIX LỖI CRASH Ở ĐÂY: Dùng isdecimal() và regex [0-9]+ để bỏ qua các ký tự như '²'
             grouped[group].sort(
-                key=lambda x: [int(c) if c.isdigit() else c.lower() for c in re.split(r'(\d+)', x['name'])]
+                key=lambda x: [int(c) if c.isdecimal() else c.lower() for c in re.split(r'([0-9]+)', x['name'])]
             )
     
     sorted_groups = sorted(grouped.items(), key=lambda x: GROUP_ORDER.get(x[0], 99))
@@ -483,7 +481,6 @@ def main():
                     if tvg_logo:
                         extinf += f' tvg-logo="{tvg_logo}"'
                     
-                    # Chèn thêm attribute ghi lại link nguồn M3U
                     if source_url:
                         extinf += f' tvg-source="{source_url}"'
                         
