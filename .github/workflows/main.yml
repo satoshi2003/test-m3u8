@@ -51,17 +51,21 @@ jobs:
             fi
           fi
           echo "Current branch: $BRANCH"
+          
           # Kiểm tra file output.m3u có tồn tại không
           if [ ! -f output.m3u ]; then
             echo "File output.m3u not found!"
             exit 1
           fi
           git add output.m3u
+          
           # Kiểm tra xem có thay đổi không
           if git diff --staged --quiet; then
             echo "No changes to commit"
             exit 0
           fi
-          git commit -m "Auto-update playlist $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          
+          # Lấy giờ Việt Nam (GMT+7) cho lịch sử commit rõ ràng hơn
+          git commit -m "Auto-update playlist $(TZ='Asia/Ho_Chi_Minh' date '+%d/%m/%Y %H:%M:%S')"
           git pull --rebase origin "$BRANCH"
           git push origin "$BRANCH"
